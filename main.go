@@ -16,14 +16,14 @@ import (
 const (
 	width       float32 = 1920
 	height      float32 = 1080
-	fps         int     = 4
+	fps         int     = 1
 	windowTitle         = "Mandelbrot"
 )
 
 var (
 	// Is it possible to statically build these into the EXE with out external tools?
-	fragmentShaderSource, _ = ioutil.ReadFile("shaders\\fragmentShaderSource.glsl")
-	vertexShaderSource, _   = ioutil.ReadFile("shaders\\vertexShaderSource.glsl")
+	fragmentShaderSource, _ = ioutil.ReadFile("shaders/fragmentShaderSource.glsl")
+	vertexShaderSource, _   = ioutil.ReadFile("shaders/vertexShaderSource.glsl")
 
 	triangle = []float32{ // Currenty unused
 		-0.5, 0.5, 0,
@@ -58,12 +58,6 @@ func main() {
 
 	for !window.ShouldClose() {
 		t := time.Now()
-
-		// Uniforms must be set before every draw
-		cstring, drop := gl.Strs("res")
-		ResolutionLoc := gl.GetUniformLocation(program, *cstring)
-		gl.Uniform2f(ResolutionLoc, width, height)
-		drop()
 
 		// Draw Square on screen
 		draw(vertexArrayObject, window, program)
@@ -134,6 +128,15 @@ func initOpenGL() uint32 {
 func draw(vertexArrayObject uint32, window *glfw.Window, program uint32) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.UseProgram(program)
+
+	// Uniforms must be set before every draw
+	cstring, drop := gl.Strs("ress")
+	ResolutionLoc := gl.GetUniformLocation(program, *cstring)
+	if ResolutionLoc == -1 {
+		println("ResolutionLoc - Error locating Uniform -", ResolutionLoc)
+	}
+	gl.Uniform2f(ResolutionLoc, width, height)
+	drop()
 
 	gl.BindVertexArray(vertexArrayObject)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square)/3))
