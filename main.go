@@ -14,16 +14,18 @@ import (
 )
 
 const (
-	width  float32 = 1920
-	height float32 = 1080
-	fps    int     = 4
+	width       float32 = 1920
+	height      float32 = 1080
+	fps         int     = 4
+	windowTitle         = "Mandelbrot"
 )
 
 var (
+	// Is it possible to statically build these into the EXE with out external tools?
 	fragmentShaderSource, _ = ioutil.ReadFile("shaders\\fragmentShaderSource.glsl")
 	vertexShaderSource, _   = ioutil.ReadFile("shaders\\vertexShaderSource.glsl")
 
-	triangle = []float32{
+	triangle = []float32{ // Currenty unused
 		-0.5, 0.5, 0,
 		-0.5, -0.5, 0,
 		0.5, -0.5, 0,
@@ -41,6 +43,8 @@ var (
 )
 
 func main() {
+	// OpenGL needs to call the same operating system thread
+	// more than once, there fore we lock it
 	runtime.LockOSThread()
 
 	window := initGlfw()
@@ -48,17 +52,20 @@ func main() {
 
 	program := initOpenGL()
 
+	// Vao is the Vertex array object, which is a ID that points to
+	// a Vertex Buffer on the GPU that contains the Vertexs of the Square
 	vertexArrayObject := makeVao(square)
-	draw(vertexArrayObject, window, program)
 
 	for !window.ShouldClose() {
 		t := time.Now()
 
+		// Uniforms must be set before every draw
 		cstring, drop := gl.Strs("res")
-
 		ResolutionLoc := gl.GetUniformLocation(program, *cstring)
-		drop()
 		gl.Uniform2f(ResolutionLoc, width, height)
+		drop()
+
+		// Draw Square on screen
 		draw(vertexArrayObject, window, program)
 
 		time.Sleep(time.Second/time.Duration(fps) - time.Since(t))
@@ -79,7 +86,7 @@ func initGlfw() *glfw.Window {
 	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
 
-	window, err := glfw.CreateWindow(int(width), int(height), "Wisward's Mandelbrot Set", nil, nil)
+	window, err := glfw.CreateWindow(int(width), int(height), windowTitle, nil, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -93,9 +100,11 @@ func initOpenGL() uint32 {
 	if err := gl.Init(); err != nil {
 		panic(err)
 	}
+
 	version := gl.GoStr(gl.GetString(gl.VERSION))
 	log.Println("OpenGL version", version)
 
+	// Shader creation
 	vertexShader, err := compileShader(string(vertexShaderSource), gl.VERTEX_SHADER)
 	if err != nil {
 		panic(err)
@@ -111,6 +120,7 @@ func initOpenGL() uint32 {
 	gl.AttachShader(program, fragmentShader)
 	gl.LinkProgram(program)
 
+	// Shader Clean up
 	gl.ValidateProgram(program)
 	gl.DeleteShader(vertexShader)
 	gl.DeleteShader(fragmentShader)
@@ -118,7 +128,9 @@ func initOpenGL() uint32 {
 	return program
 }
 
-// Here we call **makeVao** to get our **vao** reference from the **triangle** points we defined before, and pass it as a new argument to the **draw** function:
+// Draw, draws the specified Vertex Array Object to the window.
+// In this call, we are also checking for window interactions
+// including mouse movement and keyboard input, but are throwing it away.
 func draw(vertexArrayObject uint32, window *glfw.Window, program uint32) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.UseProgram(program)
@@ -131,6 +143,7 @@ func draw(vertexArrayObject uint32, window *glfw.Window, program uint32) {
 }
 
 // makeVao initializes and returns a vertex array from the points provided.
+// makeVao returns the ID that points to the Vertex Buffer on the GPU
 func makeVao(points []float32) uint32 {
 	var vbo uint32
 	gl.GenBuffers(1, &vbo)
@@ -147,6 +160,8 @@ func makeVao(points []float32) uint32 {
 	return vao
 }
 
+// Compiles the shader before it can be used. The shader ID gets
+// returned if the shader compiles correctly.
 func compileShader(source string, shaderType uint32) (uint32, error) {
 	shader := gl.CreateShader(shaderType)
 
