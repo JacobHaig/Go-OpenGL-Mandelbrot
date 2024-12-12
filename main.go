@@ -1,13 +1,13 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 	"runtime"
 	"time"
 
 	gl "github.com/go-gl/gl/v4.1-core/gl"
-	"github.com/go-gl/glfw/v3.2/glfw"
+	glfw "github.com/go-gl/glfw/v3.3/glfw"
 
 	"fmt"
 	"strings"
@@ -22,8 +22,8 @@ const (
 
 var (
 	// Is it possible to statically build these into the EXE with out external tools?
-	fragmentShaderSource, _ = ioutil.ReadFile("shaders/fragmentShaderSource.glsl")
-	vertexShaderSource, _   = ioutil.ReadFile("shaders/vertexShaderSource.glsl")
+	fragmentShaderSource, _ = os.ReadFile("shaders/fragmentShaderSource.glsl")
+	vertexShaderSource, _   = os.ReadFile("shaders/vertexShaderSource.glsl")
 
 	triangle = []float32{ // Currenty unused
 		-0.5, 0.5, 0,
@@ -99,11 +99,11 @@ func initOpenGL() uint32 {
 	log.Println("OpenGL version", version)
 
 	// Shader creation
-	vertexShader, err := compileShader(string(vertexShaderSource), gl.VERTEX_SHADER)
+	vertexShader, err := compileShader(string(vertexShaderSource)+"\x00", gl.VERTEX_SHADER)
 	if err != nil {
 		panic(err)
 	}
-	fragmentShader, err := compileShader(string(fragmentShaderSource), gl.FRAGMENT_SHADER)
+	fragmentShader, err := compileShader(string(fragmentShaderSource)+"\x00", gl.FRAGMENT_SHADER)
 	if err != nil {
 		panic(err)
 	}
